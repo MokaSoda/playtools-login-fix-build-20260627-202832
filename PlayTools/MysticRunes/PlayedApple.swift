@@ -154,16 +154,16 @@ public class PlayKeychain: NSObject {
         // Check for r_Ref
         if query["r_Ref"] as? Int == 1 {
             // Return the data on v_PersistentRef or v_Data if they exist
-            var key: CFTypeRef?
+            var key: Data?
             if let vData = keychainDict[kSecValueData] {
                 NSLog("found v_Data")
                 debugLogger("Read keychain item from db")
-                key = vData as CFTypeRef
+                key = vData as? Data
             }
             if let vPersistentRef = keychainDict[kSecValuePersistentRef] {
                 NSLog("found persistent ref")
                 debugLogger("Read keychain item from db")
-                key = vPersistentRef as CFTypeRef
+                key = vPersistentRef as? Data
             }
 
             if key == nil {
@@ -172,12 +172,16 @@ public class PlayKeychain: NSObject {
             }
 
             let dummyKeyAttrs = [
-                kSecAttrKeyType: keychainDict[kSecAttrKeyType] ?? kSecAttrKeyTypeRSA,
-                kSecAttrKeyClass: keychainDict[kSecAttrKeyClass] ?? kSecAttrKeyClassPublic
+                kSecAttrKeyType: keychainDict[kSecAttrKeyType] ?? keychainDict["type"] ?? kSecAttrKeyTypeRSA,
+                kSecAttrKeyClass: keychainDict[kSecAttrKeyClass] ?? keychainDict["kcls"] ?? kSecAttrKeyClassPublic
             ] as CFDictionary
 
-            let secKey = SecKeyCreateWithData(key as! CFData, dummyKeyAttrs, nil) // swiftlint:disable:this force_cast
-            result?.pointee = Unmanaged.passRetained(secKey!)
+            if let key,
+               let secKey = SecKeyCreateWithData(key as CFData, dummyKeyAttrs, nil) {
+                result?.pointee = Unmanaged.passRetained(secKey)
+            } else if let key {
+                result?.pointee = Unmanaged.passRetained(key as CFTypeRef)
+            }
             return errSecSuccess
         }
 
@@ -187,15 +191,7 @@ public class PlayKeychain: NSObject {
             // Check the class type, if it is a key we need to return the data
             // as SecKeyRef, otherwise we can return it as a CFTypeRef
             if classType == "keys" {
-                // kSecAttrKeyType is stored as `type` in the dictionary
-                // kSecAttrKeyClass is stored as `kcls` in the dictionary
-                let keyAttributes = [
-                    kSecAttrKeyType: keychainDict[kSecAttrKeyType] as! CFString, // swiftlint:disable:this force_cast
-                    kSecAttrKeyClass: keychainDict[kSecAttrKeyClass] as! CFString // swiftlint:disable:this force_cast
-                ]
-                let keyData = vData as! Data // swiftlint:disable:this force_cast
-                let key = SecKeyCreateWithData(keyData as CFData, keyAttributes as CFDictionary, nil)
-                result?.pointee = Unmanaged.passRetained(key!)
+                result?.pointee = Unmanaged.passRetained(vData as CFTypeRef)
                 return errSecSuccess
             }
             result?.pointee = Unmanaged.passRetained(vData as CFTypeRef)
