@@ -123,9 +123,15 @@ public class PlayKeychain: NSObject {
 
         if query[kSecMatchLimit as String] as? String ==  kSecMatchLimitAll as String {
             result?.pointee = Unmanaged.passRetained(keychainDicts.map({
-                $0.removeObject(forKey: kSecValueData)
-                $0.removeObject(forKey: kSecValueRef)
-                $0.removeObject(forKey: kSecValuePersistentRef)
+                if query["r_Data"] as? Int != 1 {
+                    $0.removeObject(forKey: kSecValueData)
+                }
+                if query["r_Ref"] as? Int != 1 {
+                    $0.removeObject(forKey: kSecValueRef)
+                }
+                if query["r_PersistentRef"] as? Int != 1 {
+                    $0.removeObject(forKey: kSecValuePersistentRef)
+                }
                 return $0
             }) as CFTypeRef)
             return errSecSuccess

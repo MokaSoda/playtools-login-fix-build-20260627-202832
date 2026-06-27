@@ -198,7 +198,7 @@ class PlayKeychainDB: NSObject {
                 return false
             }
 
-            return sqlite3_step(stmt) == SQLITE_OK
+            return sqlite3_step(stmt) == SQLITE_DONE
         }) else { return false }
 
         return true
